@@ -141,11 +141,9 @@
 
             recognition = new SpeechRecognition();
             recognition.continuous = true;
-            recognition.interimResults = true;
+            recognition.interimResults = false; // Changed to false to simplify logic and prevent duplication
             recognition.lang = 'en-US';
             
-            let finalTranscript = '';
-            let interimTranscript = '';
             let wasStoppedManually = false;
 
             // --- State Management ---
@@ -204,15 +202,14 @@
             };
 
             recognition.onresult = (event) => {
-                interimTranscript = '';
+                let newTranscript = '';
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript;
-                    } else {
-                        interimTranscript += event.results[i][0].transcript;
-                    }
+                    // With interimResults = false, we only get final results
+                    newTranscript += event.results[i][0].transcript;
                 }
                 
+                if (!newTranscript) return;
+
                 // Use stored cursor position to insert text
                 const selection = window.getSelection();
                 if(lastCursorPosition && selection.rangeCount > 0) {
@@ -228,14 +225,12 @@
                 }
 
                 // Insert the new text. Using execCommand is more reliable for undo/redo
-                document.execCommand('insertText', false, finalTranscript + interimTranscript);
-                finalTranscript = '';
+                document.execCommand('insertText', false, newTranscript);
             };
 
             // --- UI Button Event Listeners ---
             startBtn.addEventListener('click', () => {
                 saveState();
-                finalTranscript = ''; // Reset transcript
                 recognition.start();
             });
 
@@ -385,3 +380,4 @@
     </script>
 </body>
 </html>
+
